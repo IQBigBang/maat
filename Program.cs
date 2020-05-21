@@ -97,27 +97,22 @@ namespace Maat
             if (Directory.Exists(projectName))
                 ErrorReporter.Error("A directory named {0} already exists in this folder.", projectName);
 
+            string toolchain = CommandInterface.IsWindows ? "gcc" // TODO: MSVC support
+                             : CommandInterface.IsOSX ? "clang"
+                             : "gcc";
+
+            Console.Write("Enter the name of the C toolchain you want to use (default: {0}): ", toolchain);
+            toolchain = Console.ReadLine();
+
+            if (!(toolchain == "gcc" || toolchain == "clang"))
+                ErrorReporter.Error("Invalid C toolchain. Supported options are GCC (= MinGW on Windows) and Clang");
+
             Console.WriteLine("Creating the project structure...");
 
             // Create the directory
             Directory.CreateDirectory(projectName);
+
             // Initialize project.yml
-            string toolchain;
-
-            if (CommandInterface.IsWindows)
-            {
-                Console.WriteLine("Detected Windows, defaulting to the MinGW compiler."); // TODO: MSVC support
-                toolchain = "gcc";
-            } else if (CommandInterface.IsOSX)
-            {
-                Console.WriteLine("Detected OSX, defaulting to the Clang compiler");
-                toolchain = "clang";
-            } else
-            {
-                Console.WriteLine("Detected Unix-like OS, defaulting to the GCC compiler");
-                toolchain = "gcc";
-            }
-
             File.WriteAllLines(Path.Combine(projectName, "project.yml"), new string[]
             {
                 "---",
