@@ -9,56 +9,46 @@ namespace Maat
     class CommandInterface
     {
         public static bool IsWindows { get { return RuntimeInformation.IsOSPlatform(OSPlatform.Windows); } }
+
         public static bool IsLinux { get { return RuntimeInformation.IsOSPlatform(OSPlatform.Linux); } }
 
         public static bool IsOSX { get { return RuntimeInformation.IsOSPlatform(OSPlatform.OSX); } }
 
         public static (string, string) RunCommand(string cmd, string[] args, string workingDir, bool printOutput = false)
         {
-            if (IsWindows)
+            if (!(IsWindows || IsLinux))
+                ErrorReporter.Warning("The command inteface has not been tested on this OS and might not work");
+
+            var process = new Process();
+            var startInfo = new ProcessStartInfo(cmd, string.Join(" ", args))
             {
-                var process = new Process();
-                var startInfo = new ProcessStartInfo(cmd, string.Join(" ", args))
-                {
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                    WorkingDirectory = workingDir
-                };
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                WorkingDirectory = workingDir
+            };
+            
+            process.StartInfo = startInfo;
+            process.Start();
 
-                process.StartInfo = startInfo;
-                process.Start();
-
-                if (printOutput)
-                {
-                    process.OutputDataReceived += (sender, data) => Console.WriteLine(data.Data);
-                    process.BeginOutputReadLine();
-                }
-
-                process.WaitForExit();
-
-                if (process.ExitCode != 0)
-                {
-                    Console.Write(process.StandardError.ReadToEnd());
-                    ErrorReporter.Error("Command `{0}` failed.", cmd);
-                }
-
-                if (printOutput)
-                    return ("", process.StandardError.ReadToEnd());
-                return (process.StandardOutput.ReadToEnd(), process.StandardError.ReadToEnd());
-            }
-            else if (IsLinux)
+            if (printOutput)
             {
-
-            }
-            else if (IsOSX)
-            {
-
+                process.OutputDataReceived += (sender, data) => Console.WriteLine(data.Data);
+                process.BeginOutputReadLine();
             }
 
-            else ErrorReporter.Error("Invalid operating system");
-            return ("", "");
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
+            {
+                Console.Write(process.StandardError.ReadToEnd());
+                ErrorReporter.Error("Command `{0}` failed.", cmd);
+            }
+
+            if (printOutput)
+                return ("", process.StandardError.ReadToEnd());
+            return (process.StandardOutput.ReadToEnd(), process.StandardError.ReadToEnd());
         }
     }
 }

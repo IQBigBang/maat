@@ -29,6 +29,22 @@ namespace Maat
             Clang
         }
 
+        /// <summary>
+        /// Get the command that invokes the compiler of a c toolchain
+        /// </summary>
+        /// <returns>The command.</returns>
+        /// <param name="toolchain">The C Toolchain</param>
+        private static string GetCommand(CToolChain toolchain)
+        {
+            switch (toolchain) {
+                case CToolChain.GCC:
+                    return "gcc";
+                case CToolChain.Clang:
+                    return "clang";
+            }
+            return "";
+        }
+
         public enum GCChoice
         {
             [YamlMember(Alias = "gjduck")] // Default (and currently the only one) supported GC
@@ -148,7 +164,7 @@ namespace Maat
 
             Console.WriteLine("Building the garbage collector...");
 
-            CommandInterface.RunCommand(projectYaml.CToolChain.ToString(), new string[] { "-c", "-o", "../gc.o", "-O2", "-std=gnu99", "-DNODEBUG", "gc.c" }, Path.Combine(projectDir, "dist", "functional", "std", "gc"));
+            CommandInterface.RunCommand(GetCommand(projectYaml.CToolChain), new string[] { "-c", "-o", "../gc.o", "-O2", "-std=gnu99", "-DNODEBUG", "gc.c" }, Path.Combine(projectDir, "dist", "functional", "std", "gc"));
 
             Console.WriteLine("Copying files...");
 
@@ -219,11 +235,15 @@ namespace Maat
             sw.WriteLine("    description = compile module $module");
             sw.WriteLine("rule cc");
             sw.WriteLine("    command = {0} $cbuildflags -I$builddir $in dist/std/gc.o -o $out", 
-                projectYaml.CToolChain == CToolChain.Clang ? "clang" : "gcc");
+                GetCommand(projectYaml.CToolChain));
             sw.WriteLine("    description = link executable $out");
             sw.WriteLine();
 
             GenerateBuildRule(sw, mainModule, "build");
+
+            var executableName = Escape(projectYaml.Name);
+            if (CommandInterface.IsWindows)
+                executableName += ".exe";
 
             sw.WriteLine("build {0}: cc {1}",
                 Escape(projectYaml.Name), Escape(string.Join(" ", AllCFiles)));
@@ -258,6 +278,12 @@ namespace Maat
                 ZipFile.ExtractToDirectory(Path.Combine(projectDir, "dist", "bin", "ninja.zip"), Path.Combine(projectDir, "dist", "bin"));
                 // Remove the archive
                 File.Delete(Path.Combine(projectDir, "dist", "bin", "ninja.zip"));
+
+                // On Linux, the file must be set as executable
+                if (CommandInterface.IsLinux)
+                {
+                    CommandInterface.RunCommand("chmod", new string[] { "+x", Path.Combine(projectDir, "dist", "bin", ninjaName) }, ".");
+                }
             }
 
             CommandInterface.RunCommand(Path.Combine(projectDir, "dist", "bin", ninjaName), new string[0], projectDir, true);
