@@ -69,6 +69,11 @@ namespace Maat
             [YamlMember(Alias = "ctoolchain")]
             public CToolChain CToolChain { get; set; }
 
+            // If true, the Functional compiler is rebuilt every time `maat build` is run
+            [YamlMember(Alias = "rebuild-fc")]
+            public string RebuildFC { get; set; }
+
+            [YamlMember(Alias = "gc")]
             public GCChoice GC { get; set; }
         }
 
@@ -257,6 +262,7 @@ namespace Maat
         public static void ActionBuild(string projectDir)
         {
             ActionGenerate(projectDir);
+            var projectYaml = ParseYaml(projectDir);
 
             string ninjaName = CommandInterface.IsWindows ? "ninja.exe" : "ninja";
 
@@ -287,6 +293,24 @@ namespace Maat
                 if (CommandInterface.IsLinux)
                 {
                     CommandInterface.RunCommand("chmod", new string[] { "+x", Path.Combine(projectDir, "dist", "bin", ninjaName) }, ".");
+                }
+            }
+            
+            // If RebuildFC is true, regenerate the compiler
+            if (projectYaml.RebuildFC == "always")
+            {
+                if (!Directory.Exists(Path.Combine(projectDir, "dist", "functional")))
+                    ErrorReporter.Error("regenerate-fc set to true, but dist/functional does not exist");
+
+                Console.WriteLine("Rebuilding the compiler...");
+
+                // here we use build instead of release because it is faster
+                CommandInterface.RunCommand("dotnet", new string[] { "build" }, Path.Combine(projectDir, "dist", "functional"));
+
+                foreach (var file in
+                    Directory.EnumerateFiles(Path.Combine(projectDir, "dist", "functional", "bin", "Debug", "netcoreapp3.1")))
+                {
+                    File.Copy(file, Path.Combine(projectDir, "dist", "bin", new FileInfo(file).Name), true);
                 }
             }
 
