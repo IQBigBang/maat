@@ -109,12 +109,14 @@ namespace Maat
             if (Directory.Exists(projectName))
                 ErrorReporter.Error("A directory named {0} already exists in this folder.", projectName);
 
-            string toolchain = CommandInterface.IsWindows ? "gcc" // TODO: MSVC support
+            string defaultToolchain = CommandInterface.IsWindows ? "gcc" // TODO: MSVC support
                              : CommandInterface.IsOSX ? "clang"
                              : "gcc";
 
-            Console.Write("Enter the name of the C toolchain you want to use (default: {0}): ", toolchain);
-            toolchain = Console.ReadLine();
+            Console.Write("Enter the name of the C toolchain you want to use (default: {0}): ", defaultToolchain);
+            string toolchain = Console.ReadLine();
+            if (toolchain == "")
+                toolchain = defaultToolchain;
 
             if (!(toolchain == "gcc" || toolchain == "clang"))
                 ErrorReporter.Error("Invalid C toolchain. Supported options are GCC (= MinGW on Windows) and Clang");
