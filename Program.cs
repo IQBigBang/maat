@@ -218,31 +218,33 @@ namespace Maat
             else
                 compilerPath = Path.Combine("dist", "bin", "Functional");
 
-            using var sw = new StreamWriter("build.ninja");
-            sw.WriteLine("fbuildflags = ");
-            if (projectYaml.CToolChain == CToolChain.GCC)
-                sw.WriteLine("cbuildflags = -std=c89 -Wno-return-type");
-            else if (projectYaml.CToolChain == CToolChain.Clang)
-                sw.WriteLine("cbuildflags = -fcolor-diagnostics -std=c89 -Wno-return-type ");
-            sw.WriteLine("builddir = build/");
-            sw.WriteLine("rule fcc");
-            sw.WriteLine("    command = {0} $in -m $module -b $builddir -i $imports $fbuildflags", compilerPath);
-            sw.WriteLine("    description = compile module $module");
-            sw.WriteLine("rule cc");
-            sw.WriteLine("    command = {0} $cbuildflags -I$builddir $in dist/std/gc.o -o $out", 
-                GetCommand(projectYaml.CToolChain));
-            sw.WriteLine("    description = link executable $out");
-            sw.WriteLine();
+            using (var sw = new StreamWriter("build.ninja"))
+            {
+                sw.WriteLine("fbuildflags = ");
+                if (projectYaml.CToolChain == CToolChain.GCC)
+                    sw.WriteLine("cbuildflags = -std=c89 -Wno-return-type");
+                else if (projectYaml.CToolChain == CToolChain.Clang)
+                    sw.WriteLine("cbuildflags = -fcolor-diagnostics -std=c89 -Wno-return-type ");
+                sw.WriteLine("builddir = build/");
+                sw.WriteLine("rule fcc");
+                sw.WriteLine("    command = {0} $in -m $module -b $builddir -i $imports $fbuildflags", compilerPath);
+                sw.WriteLine("    description = compile module $module");
+                sw.WriteLine("rule cc");
+                sw.WriteLine("    command = {0} $cbuildflags -I$builddir $in dist/std/gc.o -o $out",
+                    GetCommand(projectYaml.CToolChain));
+                sw.WriteLine("    description = link executable $out");
+                sw.WriteLine();
 
-            GenerateBuildRule(sw, mainModule, "build");
+                GenerateBuildRule(sw, mainModule, "build");
 
-            var executableName = Escape(projectYaml.Name);
-            if (CommandInterface.IsWindows)
-                executableName += ".exe";
+                var executableName = Escape(projectYaml.Name);
+                if (CommandInterface.IsWindows)
+                    executableName += ".exe";
 
-            sw.WriteLine("build {0}: cc {1}",
-                Escape(projectYaml.Name), Escape(string.Join(" ", AllCFiles)));
-            sw.WriteLine("default {0}", Escape(projectYaml.Name));
+                sw.WriteLine("build {0}: cc {1}",
+                    Escape(projectYaml.Name), Escape(string.Join(" ", AllCFiles)));
+                sw.WriteLine("default {0}", Escape(projectYaml.Name));
+            }
         }
 
         public static void ActionBuild(string projectDir)
@@ -332,7 +334,7 @@ Supported actions:
             if (!new DirectoryInfo(projectDir).Exists)
             {
                 ErrorReporter.Error("Project folder does not exist");
-                return default;
+                return default(ProjectFile);
             }
 
             var projectFile =
@@ -341,7 +343,7 @@ Supported actions:
             if (projectFile is null)
             {
                 ErrorReporter.ErrorFL("project file not found", "project.yml");
-                return default;
+                return default(ProjectFile);
             }
 
             var deserializer = new DeserializerBuilder()
@@ -355,7 +357,7 @@ Supported actions:
             if (deserialized.CToolChain == CToolChain.NoValue)
             {
                 ErrorReporter.ErrorFL("required value `ctoolchain` not found", "project.yml");
-                return default;
+                return default(ProjectFile);
             }
             return deserialized;
         }
