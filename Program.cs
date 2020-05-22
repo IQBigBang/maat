@@ -54,7 +54,14 @@ namespace Maat
 
         public struct ProjectFile
         {
+            [YamlMember(Alias = "name")]
             public string Name { get; set; }
+
+            [YamlMember(Alias = "author")]
+            public string Author { get; set; }
+
+            [YamlMember(Alias = "version")]
+            public string Version { get; set; }
 
             [YamlMember(Alias = "main")]
             public string MainFile { get; set; }
@@ -347,8 +354,7 @@ Supported actions:
             }
 
             var deserializer = new DeserializerBuilder()
-                .IgnoreUnmatchedProperties()
-                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .WithNamingConvention(NullNamingConvention.Instance)
                 .Build();
 
             var deserialized = deserializer.Deserialize<ProjectFile>(projectFile.OpenText());
